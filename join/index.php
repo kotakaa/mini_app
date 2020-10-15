@@ -1,5 +1,6 @@
 <?php
 	session_start();
+  require('../dbconnect.php');
 
   if (!empty($_POST)){
     if($_POST['name'] === ''){
@@ -18,8 +19,36 @@
       $error['password'] = 'blank';
 		}
 		
+		$filename = $_FILES['image']['name'];
+		if(!empty($filename)) {
+			// 後ろの３文字を切り取っている
+			$ext = substr($filename, -3);
+			if($ext !== 'jpg' && $ext !== 'png' && $ext !== 'gif' && $ext !== 'peg'){
+				$error['image'] = 'type';
+			}
+		}
+		
+		// アカウントの重複をチェック
 		if(empty($error)){
+			$member = $db->prepare('SELECT COUNT(*) AS cnt FROM members WHERE email=?');
+			// memberの中にいれば1いなければ0を返す
+			$member->execute(array($_POST['email']));
+			$record = $member->fetch();
+			if($record['cnt'] > 0){
+				$error['email'] = 'duplicate';
+			}
+		}
+
+		if(empty($error)){
+			if(!empty($filename)) {
+				$image = date('YmdHis') . $_FILES['image']['name'];
+				move_uploaded_file($_FILES['image']['tmp_name'], '../member_picture/' . $image);
+			}else{
+				$image = "";
+			}
+
 			$_SESSION['join'] = $_POST;
+			$_SESSION['join']['image'] = $image;
 			header('Location: check.php');
 			exit();
 		}
@@ -62,6 +91,9 @@
 				<?php if($error['email'] === "blank"):?>
           <p class="error">メールアドレスを入力してください</p>
 				<?php endif;?>
+				<?php if($error['email'] === "duplicate"):?>
+          <p class="error">指定されたメールアドレスは既に登録されております。</p>
+				<?php endif;?>
 		<dt>パスワード<span class="required">必須</span></dt>
 		<dd>
         <input type="password" name="password" size="10" maxlength="40" value="<?php print(htmlspecialchars($_POST['password'], ENT_QUOTES));?>" />
@@ -76,7 +108,10 @@
 		<dt>写真など</dt>
 		<dd>
       <input type="file" name="image" size="35" value="test"  />
-        </dd>
+			<?php if($error['image'] === "type"):?>
+        <p class="error">その画像はアップロードできません。</p>
+      <?php endif;?>
+    </dd>
 	</dl>
 	<div><input type="submit" value="入力内容を確認する" /></div>
 </form>
