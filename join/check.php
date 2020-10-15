@@ -1,9 +1,23 @@
 <?php
 session_start();
-if(!isset($_SESSION['join'])) {
-	header('Location: index.php');
-	exit();
-}
+require('../dbconnect.php');
+  if(!isset($_SESSION['join'])) {
+    header('Location: index.php');
+    exit();
+	}
+	if(!empty($_POST)) {
+		$statement = $db->prepare('INSERT INTO members SET name=?, email=?, password=?, picture=?, created_at=NOW()');
+		$statement->execute(array(
+			$_SESSION['join']['name'],
+			$_SESSION['join']['email'],
+			sha1($_SESSION['join']['password']),
+			$_SESSION['join']['image'],
+		)); 
+		unset($_SESSION['join']);
+
+		header('Location: thanks.php');
+		exit();
+	}
 ?>
 <!DOCTYPE html>
 <html lang="ja">
@@ -40,6 +54,11 @@ if(!isset($_SESSION['join'])) {
 		</dd>
 		<dt>写真など</dt>
 		<dd>
+      <?php if($_SESSION['join']['image'] !== "" && $_SESSION['join']['image'] !== null):?>
+        <img style="width: 250px" src="../member_picture/<?php print(htmlspecialchars($_SESSION['join']['image'], ENT_QUOTES));?>" >
+			<?php else:?>
+        画像は選択されていません
+			<?php endif;?>
 		</dd>
 	</dl>
 	<div><a href="index.php?action=rewrite">&laquo;&nbsp;書き直す</a> | <input type="submit" value="登録する" /></div>
