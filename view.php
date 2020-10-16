@@ -1,3 +1,15 @@
+<?php
+  session_start();
+  require('dbconnect.php');
+
+  if (empty($_REQUEST['id'])){
+    header('Location: index.php');
+		exit();
+  }
+
+  $posts = $db->prepare('SELECT members.name, members.picture, posts.* FROM members, posts WHERE members.id=posts.member_id AND posts.id=?');
+  $posts->execute(array($_REQUEST['id']));
+?>
 <!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -17,13 +29,19 @@
   <div id="content">
   <p>&laquo;<a href="index.php">一覧にもどる</a></p>
 
+  <?php if($post = $posts->fetch()): ?>
     <div class="msg">
-    <img src="member_picture/" />
-    <p><span class="name">（）</span></p>
-    <p class="day"></p>
+    <?php if($post['picture'] !== ""): ?>
+      <img style="width: 250px" src="member_picture/<?php print(htmlspecialchars($post['picture'], ENT_QUOTES));?>" alt="<?php print(htmlspecialchars($post['name'], ENT_QUOTES));?>"/>
+    <?php else:?>
+      <img style="width: 180px" src="./images/no_image.jpg" alt="no_image" />
+    <?php endif;?>
+    <p><?php print(htmlspecialchars($post['message'], ENT_QUOTES));?><span class="name">（<?php print(htmlspecialchars($post['name'], ENT_QUOTES));?>）</span></p>
+    <p class="day"><?php print(htmlspecialchars($post['created_at'], ENT_QUOTES));?></p>
     </div>
-
-	<p>その投稿は削除されたか、URLが間違えています</p>
+  <?php else:?>
+    <p>その投稿は削除されたか、URLが間違えています</p>
+  <?php endif;?>
   </div>
 </div>
 </body>

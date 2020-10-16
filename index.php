@@ -26,7 +26,21 @@
     }
   }
 
-  $posts = $db->query('SELECT members.name, members.picture, posts.* FROM members, posts WHERE members.id=posts.member_id ORDER BY posts.created_at DESC');
+  $page = $_REQUEST['page'];
+  if (isset($_REQUEST['page']) && is_numeric($_REQUEST['page']) && $page >= 1) {  //数字以外、何も入っていない場合はelseにとばす
+    $page = $_REQUEST['page'];
+  }else {
+    $page = 1;  //指定がない場合は1ページ目を表示する
+  }
+  $counts = $db->query('SELECT COUNT(*) as count FROM posts');
+  $count = $counts->fetch();
+  $max_page = ceil($count['count'] / 5);  //ceilは切り上げ
+  $page = min($page, $max_page);
+
+  $start = ($page - 1) * 5;
+  $posts = $db->prepare('SELECT members.name, members.picture, posts.* FROM members, posts WHERE members.id=posts.member_id ORDER BY posts.created_at DESC LIMIT ?,5');
+  $posts->bindParam(1, $start, PDO::PARAM_INT);
+  $posts->execute();
   
   if(isset($_REQUEST['res'])){
     // 返信の処理
@@ -83,19 +97,32 @@
       [<a href="index.php?res=<?php print(htmlspecialchars($post['id'], ENT_QUOTES));?>">Re</a>]
     </p>
     <p class="day">
-    <?php print(htmlspecialchars($post['created_at'], ENT_QUOTES));?>
-      <a href="view.php?id="></a>
-      <a href="view.php?id=">
-      返信元のメッセージ</a>
-      [<a href="delete.php?id="
-      style="color: #F33;">削除</a>]
+      <a href="view.php?id=<?php print(htmlspecialchars($post['id'], ENT_QUOTES));?>"><?php print(htmlspecialchars($post['created_at'], ENT_QUOTES));?></a>
+      
+      <?php if($post['reply_message_id'] > 0): ?>
+        <a href="view.php?id=<?php print(htmlspecialchars($post['reply_message_id'], ENT_QUOTES));?>">返信元のメッセージ</a>
+      <?php endif;?>
+      <!-- ログインしているユーザーのid === 投稿した人のid -->
+      <?php if($_SESSION['id'] === $post['member_id'] ): ?>
+        [<a href="delete.php?id=<?php print(htmlspecialchars($post['id'], ENT_QUOTES));?>"
+            style="color: #F33;">削除
+        </a>]
+      <?php endif;?>
     </p>
     </div>
   <?php endforeach;?>
 
 <ul class="paging">
-<li><a href="index.php?page=">前のページへ</a></li>
-<li><a href="index.php?page=">次のページへ</a></li>
+  <?php if($page > 1):?>
+    <li><a href="index.php?page=<?php print($page - 1 );?>">前のページへ</a></li>
+  <?php else: ?>
+    <li>前のページへ</li>
+  <?php endif;?>
+  <?php if($page < $max_page):?>
+    <li><a href="index.php?page=<?php print($page + 1 );?>">次のページへ</a></li>
+  <?php else: ?>
+    <li>次のページへ</li>
+  <?php endif;?>
 </ul>
   </div>
 </div>
